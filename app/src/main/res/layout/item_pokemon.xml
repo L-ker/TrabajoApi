@@ -20,7 +20,8 @@
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintBottom_toTopOf="@+id/tvPokemonName" />
+            android:background="#278dd6"
+            app:layout_constraintBottom_toTopOf="@+id/tvPokemonName"/>
 
         <TextView
             android:id="@+id/tvPokemonName"
@@ -28,7 +29,7 @@
             android:layout_height="wrap_content"
             android:gravity="center"
             android:textColor="@android:color/white"
-            android:background="#80000000"
+            android:background="#2741d6"
             android:textSize="18sp"
             app:layout_constraintTop_toBottomOf="@+id/ivPokemon"
             app:layout_constraintStart_toStartOf="parent"
@@ -40,7 +41,7 @@
             android:layout_height="wrap_content"
             android:gravity="center"
             android:textColor="@android:color/white"
-            android:background="#80000000"
+            android:background="#2741d6"
             android:textSize="14sp"
             app:layout_constraintTop_toBottomOf="@+id/tvPokemonName"
             app:layout_constraintStart_toStartOf="parent"

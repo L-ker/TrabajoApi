@@ -15,6 +15,12 @@ class PokemonAdapter(
         notifyItemRangeInserted(start, newList.size)
     }
 
+    fun setPokemon(newList: List<PokemonListItem>) {
+        pokemonList.clear()
+        pokemonList.addAll(newList)
+        notifyDataSetChanged()
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PokemonViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_pokemon, parent, false)
@@ -23,7 +29,7 @@ class PokemonAdapter(
 
     override fun onBindViewHolder(holder: PokemonViewHolder, position: Int) {
         val item = pokemonList[position]
-        holder.bindListItem(item)
+        holder.bindListItem(item)  // siempre bindListItem, porque ahora url viene bien
         holder.itemView.setOnClickListener { onItemClick?.invoke(item) }
     }
 

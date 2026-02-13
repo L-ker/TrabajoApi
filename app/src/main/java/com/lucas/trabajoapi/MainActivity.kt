@@ -1,8 +1,8 @@
 package com.lucas.trabajoapi
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.core.view.isVisible
@@ -23,6 +23,8 @@ class MainActivity : AppCompatActivity() {
 
     private var offset = 0
     private var isLoading = false
+    private var isSearching = false   // 🔥 NUEVO
+    private val pageSize = 20
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,38 +42,56 @@ class MainActivity : AppCompatActivity() {
 
     private fun initUI() {
         adapter = PokemonAdapter { item ->
-            // Al click de un Pokémon, cargar detalles
-            fetchPokemonDetails(item.name)
+            val intent = Intent(this, DetailActivity::class.java)
+            intent.putExtra("pokemon_name", item.name)
+            startActivity(intent)
         }
 
         binding.rvPokemon.layoutManager =
             LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         binding.rvPokemon.adapter = adapter
 
-        // Scroll listener para paginación
         binding.rvPokemon.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
                 val lm = rv.layoutManager as LinearLayoutManager
                 val lastVisible = lm.findLastVisibleItemPosition()
                 val totalCount = lm.itemCount
 
-                if (!isLoading && lastVisible >= totalCount - 3) {
+                if (!isLoading && !isSearching && lastVisible >= totalCount - 3) {
                     loadPokemon()
                 }
             }
         })
 
-        // Búsqueda
         binding.searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
-                query?.let {
-                    if (it.isNotBlank()) fetchPokemonDetails(it.lowercase())
-                }
-                binding.searchView.clearFocus() // oculta teclado
-                return true // <- importante para que no abra Google
+                query?.let { fetchPokemonDetails(it.lowercase()) }
+                return false
             }
             override fun onQueryTextChange(newText: String?) = false
         })
+
+        binding.btnResetSearch.setOnClickListener {
+
+            // 1️⃣ Salimos del modo búsqueda
+            isSearching = false
+
+            // 2️⃣ Evitamos dobles cargas
+            isLoading = false
+
+            // 3️⃣ Limpiamos UI
+            binding.searchView.setQuery("", false)
+
+            // 4️⃣ Limpiamos lista de forma segura
+            adapter.pokemonList.clear()
+            adapter.notifyDataSetChanged()
+
+            // 5️⃣ Reiniciamos paginación
+            offset = 0
+
+            // 6️⃣ Cargamos desde cero
+            loadPokemon()
+        }
     }
 
     private fun loadPokemon() {
@@ -79,30 +99,15 @@ class MainActivity : AppCompatActivity() {
         binding.progressBar.isVisible = true
 
         CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val response = retrofit.create(ApiService::class.java)
-                    .getPokemonList(offset = offset)
+            val response = retrofit.create(ApiService::class.java)
+                .getPokemonList(offset = offset, limit = pageSize)
 
-                if (response.isSuccessful) {
-                    val list = response.body()?.results ?: emptyList()
-                    offset += list.size
+            if (response.isSuccessful) {
+                val list = response.body()?.results ?: emptyList()
+                offset += list.size
 
-                    runOnUiThread {
-                        adapter.addPokemon(list)
-                        binding.progressBar.isVisible = false
-                        isLoading = false
-                    }
-                } else {
-                    runOnUiThread {
-                        Toast.makeText(this@MainActivity, "Error cargando Pokémon", Toast.LENGTH_SHORT).show()
-                        binding.progressBar.isVisible = false
-                        isLoading = false
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
                 runOnUiThread {
-                    Toast.makeText(this@MainActivity, "Error de conexión", Toast.LENGTH_SHORT).show()
+                    adapter.addPokemon(list)
                     binding.progressBar.isVisible = false
                     isLoading = false
                 }
@@ -111,32 +116,28 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun fetchPokemonDetails(name: String) {
+        isSearching = true
         binding.progressBar.isVisible = true
 
         CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val response = retrofit.create(ApiService::class.java)
-                    .getPokemonDetails(name)
+            val response = retrofit.create(ApiService::class.java)
+                .getPokemonDetails(name)
 
-                if (response.isSuccessful && response.body() != null) {
-                    val pokemon = response.body()!!
+            if (response.isSuccessful) {
+                response.body()?.let { pokemon ->
+                    val spriteUrl = pokemon.sprites.frontDefault
+
                     runOnUiThread {
                         adapter.pokemonList.clear()
-                        adapter.pokemonList.add(PokemonListItem(pokemon.species.name, ""))
+                        adapter.pokemonList.add(
+                            PokemonListItem(
+                                name = pokemon.species.name,
+                                url = spriteUrl
+                            )
+                        )
                         adapter.notifyDataSetChanged()
                         binding.progressBar.isVisible = false
                     }
-                } else {
-                    runOnUiThread {
-                        Toast.makeText(this@MainActivity, "Pokémon no encontrado", Toast.LENGTH_SHORT).show()
-                        binding.progressBar.isVisible = false
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                runOnUiThread {
-                    Toast.makeText(this@MainActivity, "Error de conexión", Toast.LENGTH_SHORT).show()
-                    binding.progressBar.isVisible = false
                 }
             }
         }

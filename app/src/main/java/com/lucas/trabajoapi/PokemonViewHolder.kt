@@ -8,33 +8,24 @@ import com.squareup.picasso.Picasso
 class PokemonViewHolder(view: View) : RecyclerView.ViewHolder(view) {
     private val binding = ItemPokemonBinding.bind(view)
 
-    fun bindDetails(pokemon: PokemonResponse) {
-        binding.tvPokemonName.text = pokemon.species.name.capitalize()
-
-        try {
-            Picasso.get().load(pokemon.sprites.frontDefault).into(binding.ivPokemon)
-        } catch (_: Exception) {}
-
-        val typesText = pokemon.types
-            .sortedBy { it.slot }
-            .joinToString(" / ") { it.type.name.capitalize() }
-
-        binding.tvPokemonTypes.text = typesText
-    }
-
     fun bindListItem(item: PokemonListItem) {
-        binding.tvPokemonName.text = item.name.capitalize()
 
-        // Sacar ID de la URL
-        val id = item.url.trimEnd('/').takeLastWhile { it.isDigit() }
-        val spriteUrl =
-            if (id.isNotEmpty()) "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/$id.png"
-            else ""
+        binding.tvPokemonName.text =
+            item.name.replaceFirstChar { it.uppercase() }
 
-        try {
-            Picasso.get().load(spriteUrl).into(binding.ivPokemon)
-        } catch (_: Exception) {}
+        val spriteUrl = if (item.url.contains("pokeapi.co")) {
+            // Es URL de la API → sacar ID
+            val id = item.url.trimEnd('/').takeLastWhile { it.isDigit() }
+            "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/$id.png"
+        } else {
+            // Es URL directa del sprite (cuando buscas)
+            item.url
+        }
 
-        binding.tvPokemonTypes.text = "" // Por defecto vacío en la lista
+        Picasso.get()
+            .load(spriteUrl)
+            .into(binding.ivPokemon)
+
+        binding.tvPokemonTypes.text = ""
     }
 }
