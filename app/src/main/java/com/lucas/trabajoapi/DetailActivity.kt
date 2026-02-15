@@ -20,26 +20,31 @@ class DetailActivity : AppCompatActivity() {
         binding = ActivityDetailBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Obtiene el nombre del Pokémon enviado desde MainActivity
         val name = intent.getStringExtra("pokemon_name") ?: return
 
+        // Configura Retrofit con url y convertor
         retrofit = Retrofit.Builder()
             .baseUrl("https://pokeapi.co/api/v2/")
             .addConverterFactory(GsonConverterFactory.create())
             .build()
 
-        // 🔥 BOTÓN VOLVER
+        // Botón para volver de pantalla
         binding.btnBack.setOnClickListener {
             finish()
         }
 
+        // cargar datos del pokemon
         loadPokemonDetails(name)
     }
 
     private fun loadPokemonDetails(name: String) {
+        // ejecuta la peticion en un hilo secundario para no bloquear el principal
         CoroutineScope(Dispatchers.IO).launch {
             val response = retrofit.create(ApiService::class.java)
                 .getPokemonDetails(name)
 
+            // si correcta va poniendo bien los datos de la respuesta para ponerlos
             if (response.isSuccessful) {
                 response.body()?.let { pokemon ->
                     runOnUiThread {

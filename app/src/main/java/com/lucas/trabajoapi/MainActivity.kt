@@ -16,6 +16,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 class MainActivity : AppCompatActivity() {
+    // declaracion de variables
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var retrofit: Retrofit
@@ -23,14 +24,16 @@ class MainActivity : AppCompatActivity() {
 
     private var offset = 0
     private var isLoading = false
-    private var isSearching = false   // 🔥 NUEVO
+    private var isSearching = false
     private val pageSize = 20
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // añadimos la url base y el conversor
         retrofit = Retrofit.Builder()
             .baseUrl("https://pokeapi.co/api/v2/")
             .addConverterFactory(GsonConverterFactory.create())
@@ -41,16 +44,20 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initUI() {
+
+        // Iniciación adapter y definir que pasa al pulsar items
         adapter = PokemonAdapter { item ->
             val intent = Intent(this, DetailActivity::class.java)
             intent.putExtra("pokemon_name", item.name)
             startActivity(intent)
         }
 
+        // Configura el RecyclerView con scroll horizontal
         binding.rvPokemon.layoutManager =
             LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         binding.rvPokemon.adapter = adapter
 
+        // implementando scroll infinito para cargar pokemons al final y optimizar todo
         binding.rvPokemon.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
                 val lm = rv.layoutManager as LinearLayoutManager
@@ -63,6 +70,7 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
+        // cuando el usuario busca algo
         binding.searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
                 query?.let { fetchPokemonDetails(it.lowercase()) }
@@ -73,23 +81,23 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnResetSearch.setOnClickListener {
 
-            // 1️⃣ Salimos del modo búsqueda
+            // Para de buscar
             isSearching = false
 
-            // 2️⃣ Evitamos dobles cargas
+            // Evitar errores de carga
             isLoading = false
 
-            // 3️⃣ Limpiamos UI
+            // limpiar interfaz
             binding.searchView.setQuery("", false)
 
-            // 4️⃣ Limpiamos lista de forma segura
+            // Limpiar lista
             adapter.pokemonList.clear()
             adapter.notifyDataSetChanged()
 
-            // 5️⃣ Reiniciamos paginación
+            // Reiniciamos el offset que se usa para optimizar las llamadas
             offset = 0
 
-            // 6️⃣ Cargamos desde cero
+            // Cargo pokemons
             loadPokemon()
         }
     }
@@ -98,6 +106,7 @@ class MainActivity : AppCompatActivity() {
         isLoading = true
         binding.progressBar.isVisible = true
 
+        // ejecuta la peticion fuera del hilo principal para no parar al usuario
         CoroutineScope(Dispatchers.IO).launch {
             val response = retrofit.create(ApiService::class.java)
                 .getPokemonList(offset = offset, limit = pageSize)
@@ -106,6 +115,7 @@ class MainActivity : AppCompatActivity() {
                 val list = response.body()?.results ?: emptyList()
                 offset += list.size
 
+                // actualiza el hilo del usuario
                 runOnUiThread {
                     adapter.addPokemon(list)
                     binding.progressBar.isVisible = false
@@ -116,17 +126,24 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun fetchPokemonDetails(name: String) {
+        // modo busqueda e indicador de que esta cargando del layout
         isSearching = true
         binding.progressBar.isVisible = true
 
+        // preparando para la llamada sin bloquear hilo principal
         CoroutineScope(Dispatchers.IO).launch {
+            //retrofit crea implementacion de apiService para usar el getpokemondetails con el anme
             val response = retrofit.create(ApiService::class.java)
                 .getPokemonDetails(name)
 
+
+            // si succesful
             if (response.isSuccessful) {
+                //extraemos cuerpo para filtrar
                 response.body()?.let { pokemon ->
                     val spriteUrl = pokemon.sprites.frontDefault
 
+                    // modificando hilo principal
                     runOnUiThread {
                         adapter.pokemonList.clear()
                         adapter.pokemonList.add(

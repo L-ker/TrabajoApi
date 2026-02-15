@@ -54,6 +54,7 @@ data class StatResponse(
 
 // Lista de los pokemon con la paginación para optimizar
 data class PokemonListResponse(
+    // Aqui no pongo lo de serializedName porque se llaman igual en la llamada que la variable
     val count: Int,
     val next: String?,
     val previous: String?,
